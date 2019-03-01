@@ -21,10 +21,12 @@ class AveragePrecisionCalculator(object):
 
     def accumulate(self, predictions, actuals, num_positives=None):
         if len(predictions) != len(actuals):
-            raise ValueError("the shape of predictions and actuals does not match.")
+            raise ValueError("the shape of predictions "\
+                             "and actuals does not match.")
         if not num_positives is None:
-            if not isinstance(num_positives, numbers.Number) or num_positives < 0:
-                raise ValueError("'num_positives' was provided but it wan't a nonzero number.")
+            if not isinstance(num_positives, numbers.Number) or num_positives<0:
+                raise ValueError("'num_positives' was provided "\
+                                 "but it wan't a nonzero number.")
         if not num_positives is None:
             self._total_positives += num_positives
         else:
@@ -62,14 +64,17 @@ class AveragePrecisionCalculator(object):
     @staticmethod
     def ap_at_n(predictions, actuals, n=20, total_num_positives=None):
         if len(predictions) != len(actuals):
-            raise ValueError("the shape of predictions and actuals does not match.")
+            raise ValueError("the shape of predictions "\
+                             "and actuals does not match.")
         if n is not None:
             if not isinstance(n, int) or n <= 0:
-                raise ValueError("n must be 'None' or a positive integer. It was '%s'." % n)
+                raise ValueError("n must be 'None' or a positive integer. "\
+                                 f"It was '{n}'.")
         ap = 0.0
         predictions = np.array(predictions)
         actuals = np.array(actuals)
-        predictions, actuals = AveragePrecisionCalculator._shuffle(predictions, actuals)
+        predictions, actuals = AveragePrecisionCalculator._shuffle(predictions,
+                                                                   actuals)
         sortidx = sorted(range(len(predictions)),
                          key=lambda k: predictions[k],
                          reverse=True)
@@ -121,15 +126,18 @@ class MeanAveragePrecisionCalculator(object):
             num_positives = [None for i in predictions.shape[1]]
         calculators = self._ap_calculators
         for i in range(len(predictions)):
-            calculators[i].accumulate(predictions[i], actuals[i], num_positives[i])
+            calculators[i].accumulate(predictions[i], actuals[i],
+                                      num_positives[i])
 
     def clear(self):
         for calculator in self._ap_calculators:
             calculator.clear()
 
     def is_empty(self):
-        return ([calculator.heap_size for calculator in self._ap_calculators] == [0 for _ in range(self._num_class)])
+        return ([calculator.heap_size for calculator in self._ap_calculators] \
+                == [0 for _ in range(self._num_class)])
 
     def peek_map_at_n(self):
-        aps = [self._ap_calculators[i].peek_ap_at_n() for i in range(self._num_class)]
+        aps = [self._ap_calculators[i].peek_ap_at_n()
+               for i in range(self._num_class)]
         return aps
