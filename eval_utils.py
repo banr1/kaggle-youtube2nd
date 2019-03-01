@@ -15,7 +15,8 @@ def calculate_perr(predictions, actuals):
     num_videos = actuals.shape[0]
     for row in np.arange(num_videos):
         num_labels = int(np.sum(actuals[row]))
-        top_indices = np.argpartition(predictions[row], -num_labels)[-num_labels:]
+        top_indices = np.argpartition(predictions[row],
+                                      -num_labels)[-num_labels:]
         item_precision = 0.0
         for label_index in top_indices:
             if predictions[row][label_index] > 0:
@@ -27,8 +28,11 @@ def calculate_perr(predictions, actuals):
 
 def calculate_gap(predictions, actuals, top_k=20):
     gap_calculator = AveragePrecisionCalculator()
-    sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions, actuals, top_k)
-    gap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+    sparse_predictions, sparse_labels, num_positives = \
+            top_k_by_class(predictions, actuals, top_k)
+    gap_calculator.accumulate(flatten(sparse_predictions),
+                              flatten(sparse_labels),
+                              sum(num_positives))
     return gap_calculator.peek_ap_at_n()
 
 def top_k_by_class(predictions, labels, k=20):
@@ -38,7 +42,8 @@ def top_k_by_class(predictions, labels, k=20):
     num_classes = predictions.shape[1]
     prediction_triplets= []
     for video_index in range(predictions.shape[0]):
-        prediction_triplets.extend(top_k_triplets(predictions[video_index],labels[video_index], k))
+        prediction_triplets.extend(top_k_triplets(predictions[video_index],
+                                                  labels[video_index], k))
     out_predictions = [[] for v in range(num_classes)]
     out_labels = [[] for v in range(num_classes)]
     for triplet in prediction_triplets:
@@ -68,14 +73,20 @@ class EvaluationMetrics(object):
         mean_hit_at_one = calculate_hit_at_one(predictions, labels)
         mean_perr = calculate_perr(predictions, labels)
         mean_loss = np.mean(loss)
-        sparse_predictions, sparse_labels, num_positives = top_k_by_class(predictions, labels, self.top_k)
-        self.map_calculator.accumulate(sparse_predictions, sparse_labels, num_positives)
-        self.global_ap_calculator.accumulate(flatten(sparse_predictions), flatten(sparse_labels), sum(num_positives))
+        sparse_predictions, sparse_labels, num_positives = \
+                top_k_by_class(predictions, labels, self.top_k)
+        self.map_calculator.accumulate(sparse_predictions,
+                                       sparse_labels,
+                                       num_positives)
+        self.global_ap_calculator.accumulate(flatten(sparse_predictions),
+                                             flatten(sparse_labels),
+                                             sum(num_positives))
         self.num_examples += batch_size
         self.sum_hit_at_one += mean_hit_at_one * batch_size
         self.sum_perr += mean_perr * batch_size
         self.sum_loss += mean_loss * batch_size
-        return {"hit_at_one": mean_hit_at_one, "perr": mean_perr, "loss": mean_loss}
+        return {"hit_at_one": mean_hit_at_one,
+                "perr": mean_perr, "loss": mean_loss}
 
     def get(self):
         if self.num_examples <= 0:
@@ -86,7 +97,8 @@ class EvaluationMetrics(object):
         aps = self.map_calculator.peek_map_at_n()
         gap = self.global_ap_calculator.peek_ap_at_n()
         epoch_info_dict = {}
-        return {"avg_hit_at_one": avg_hit_at_one, "avg_perr": avg_perr, "avg_loss": avg_loss, "aps": aps, "gap": gap}
+        return {"avg_hit_at_one": avg_hit_at_one, "avg_perr": avg_perr,
+                "avg_loss": avg_loss, "aps": aps, "gap": gap}
 
     def clear(self):
         self.sum_hit_at_one = 0.0
