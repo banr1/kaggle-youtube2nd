@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def sample_random_sequence(model_input, num_frames, num_samples):
+def sample_random_seq(model_input, num_frames, num_samples):
     batch_size = tf.shape(model_input)[0]
     frame_index_offset = tf.tile(tf.expand_dims(tf.range(num_samples), 0),
                                  [batch_size, 1])
