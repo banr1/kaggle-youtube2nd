@@ -17,14 +17,15 @@ from readers import YT8MFrameFeatureReader, YT8MAggregatedFeatureReader
 from utils import make_summary, get_feature_names_and_sizes
 
 if __name__ == "__main__":
-    flags.DEFINE_string("train_dir", "/tmp/yt8m_model/", "")
-    flags.DEFINE_string("train_data_pattern", "", "")
-    flags.DEFINE_string("feature_names", "mean_rgb", "")
-    flags.DEFINE_string("feature_sizes", "1024", "")
-    flags.DEFINE_bool("frame_features", False, "")
+    flags.DEFINE_string("train_dir", "../log/", "")
+    flags.DEFINE_string("train_data_pattern", "../input/train/*.tfrecord", "")
+    flags.DEFINE_string("feature_names", "rgb,audio", "")
+    flags.DEFINE_string("feature_sizes", "1024,128", "")
+    flags.DEFINE_bool("frame_features", True, "")
+    flags.DEFINE_integer("batch_size", 1024, "")
+    flags.DEFINE_integer("num_readers", 8, "")
     flags.DEFINE_string("model", "LogisticModel", "")
     flags.DEFINE_bool("start_new_model", False, "")
-    flags.DEFINE_integer("batch_size", 1024, "")
     flags.DEFINE_string("label_loss", "CrossEntropyLoss", "")
     flags.DEFINE_float("regularization_penalty", 1, "")
     flags.DEFINE_float("base_lr", 0.001, "")
@@ -33,7 +34,6 @@ if __name__ == "__main__":
     flags.DEFINE_integer("num_epochs", 15, "")
     flags.DEFINE_integer("max_steps", None, "")
     flags.DEFINE_integer("export_model_steps", 10000, "")
-    flags.DEFINE_integer("num_readers", 8, "")
     flags.DEFINE_string("optimizer", "AdamOptimizer", "")
     flags.DEFINE_float("clip_gradient_norm", 1.0, "")
     flags.DEFINE_bool("log_device_placement", False, "")
@@ -52,7 +52,7 @@ def validate_class_name(flag_value, category, modules, expected_superclass):
 
 def get_input_data_tensors(reader,
                            data_pattern,
-                           batch_size=1000,
+                           batch_size=1024,
                            num_epochs=None,
                            num_readers=1):
     logging.info(f"Using batch size of {batch_size} for training.")
@@ -69,8 +69,8 @@ def get_input_data_tensors(reader,
                           for _ in range(num_readers)]
         return tf.train.shuffle_batch_join(training_data,
                                            batch_size=batch_size,
-                                           capacity=FLAGS.batch_size * 5,
-                                           min_after_dequeue=FLAGS.batch_size,
+                                           capacity=batch_size*5,
+                                           min_after_dequeue=batch_size,
                                            allow_smaller_final_batch=True,
                                            enqueue_many=True)
 
@@ -82,7 +82,7 @@ def build_graph(reader,
                 model,
                 train_data_pattern,
                 label_loss_fn=losses.CrossEntropyLoss(),
-                batch_size=1000,
+                batch_size=1024,
                 base_learning_rate=0.01,
                 learning_rate_decay_examples=1000000,
                 learning_rate_decay=0.95,

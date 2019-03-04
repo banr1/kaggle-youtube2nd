@@ -10,14 +10,14 @@ from readers import YT8MFrameFeatureReader, YT8MAggregatedFeatureReader
 from utils import make_summary, get_feature_names_and_sizes
 
 if __name__ == '__main__':
-    flags.DEFINE_string("train_dir", "/tmp/yt8m_model/", "")
-    flags.DEFINE_string("output_file", "", "")
-    flags.DEFINE_string("input_data_pattern", "", "")
-    flags.DEFINE_bool("frame_features", False, "")
+    flags.DEFINE_string("train_dir", "../log/", "")
+    flags.DEFINE_string("test_data_pattern", "../input/test/*.tfrecord", "")
+    flags.DEFINE_string("feature_names", "rgb,audio", "")
+    flags.DEFINE_string("feature_sizes", "1024,128", "")
+    flags.DEFINE_bool("frame_features", True, "")
     flags.DEFINE_integer("batch_size", 8192, "")
-    flags.DEFINE_string("feature_names", "mean_rgb", "")
-    flags.DEFINE_string("feature_sizes", "1024", "")
     flags.DEFINE_integer("num_readers", 4, "")
+    flags.DEFINE_string("output_file", "", "")
     flags.DEFINE_integer("top_k", 20, "")
     flags.DEFINE_integer("check_point",-1, "")
 
@@ -107,9 +107,9 @@ def main(unused_argv):
         reader = YT8MAggregatedFeatureReader(feature_names=feature_names, feature_sizes=feature_sizes)
     if FLAGS.output_file is "":
         raise ValueError("'output_file' was not specified. Unable to continue with inference.")
-    if FLAGS.input_data_pattern is "":
-        raise ValueError("'input_data_pattern' was not specified. Unable to continue with inference.")
-    inference(reader, FLAGS.train_dir, FLAGS.input_data_pattern,
+    if FLAGS.test_data_pattern is "":
+        raise ValueError("'test_data_pattern' was not specified. Unable to continue with inference.")
+    inference(reader, FLAGS.train_dir, FLAGS.test_data_pattern,
         FLAGS.output_file, FLAGS.batch_size, FLAGS.top_k)
 
 if __name__ == "__main__":
