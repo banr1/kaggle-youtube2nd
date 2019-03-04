@@ -204,9 +204,8 @@ class Trainer(object):
                 logging.info(f"{str_task(self.task)}: Entering training loop.")
                 while (not sv.should_stop()) and (not self.max_steps_reached):
                     batch_start_time = time.time()
-                    _, global_step_, loss_, predictions_, labels_ = \
-                            sess.run([train_op, global_step, loss,
-                                      predictions, labels])
+                    _, global_step_, loss_, predictions_, labels_ = sess.run(
+                            [train_op, global_step, loss, predictions, labels])
                     secs_per_batch = time.time() - batch_start_time
                     if self.max_steps and self.max_steps <= global_step_:
                         self.max_steps_reached = True
