@@ -6,8 +6,8 @@ from tensorflow import gfile
 from tensorflow import logging
 FLAGS = flags.FLAGS
 
-from readers import YT8MFrameFeatureReader, YT8MAggregatedFeatureReader
-from utils import make_summary, get_feature_names_and_sizes
+from readers import get_reader
+from utils import make_summary, get_input_data_tensors
 
 if __name__ == '__main__':
     flags.DEFINE_string("train_dir", "../log/", "")
@@ -32,32 +32,17 @@ def format_lines(video_ids, predictions, top_k):
               + " ".join(f"{label} {confidence}" for label,confidence in line) \
               + "\n"
 
-def get_input_data_tensors(reader, data_pattern, batch_size, num_readers=1):
-    with tf.name_scope("input"):
-        files = gfile.Glob(data_pattern)
-        if not files:
-            raise IOError("Unable to find input files. "
-                          f"data_pattern='{data_pattern}'")
-        logging.info(f"number of input files: {len(files)}")
-        filename_queue = tf.train.string_input_producer(files,
-                                                        num_epochs=1,
-                                                        shuffle=False)
-        examples_and_labels = [reader.prepare_reader(filename_queue)
-                               for _ in range(num_readers)]
-        video_id_batch, video_batch, unused_labels, num_frames_batch = (
-                tf.train.batch_join(examples_and_labels,
-                                    batch_size=batch_size,
-                                    allow_smaller_final_batch = True,
-                                    enqueue_many=True))
-        return video_id_batch, video_batch, num_frames_batch
-
-def inference(reader, train_dir, data_pattern,
+def inference(reader, train_dir, test_data_pattern,
               out_file_location, batch_size, top_k):
     with tf.Session() as sess, gfile.Open(out_file_location, "w+") as out_file:
-        video_id_batch, video_batch, num_frames_batch = \
+        video_id_batch, video_batch, unused_labels, num_frames_batch = \
                 get_input_data_tensors(reader,
-                                       data_pattern,
-                                       batch_size)
+                                       test_data_pattern,
+                                       shuffle=False,
+                                       batch_size=batch_size,
+                                       num_readers=1,
+                                       num_epochs=1,
+                                       phase="test")
         latest_checkpoint = tf.train.latest_checkpoint(train_dir)
         if latest_checkpoint is None:
             raise Exception("unable to find a checkpoint "\
@@ -121,14 +106,9 @@ def inference(reader, train_dir, data_pattern,
 
 def main(unused_argv):
     logging.set_verbosity(tf.logging.INFO)
-    feature_names, feature_sizes = get_feature_names_and_sizes(
-            FLAGS.feature_names, FLAGS.feature_sizes)
-    if FLAGS.frame_features:
-        reader = YT8MFrameFeatureReader(feature_names=feature_names,
-                                        feature_sizes=feature_sizes)
-    else:
-        reader = YT8MAggregatedFeatureReader(feature_names=feature_names,
-                                             feature_sizes=feature_sizes)
+    reader = get_reader(FLAGS.feature_names,
+                        FLAGS.feature_sizes,
+                        FLAGS.frame_features)
     if FLAGS.output_file is "":
         raise ValueError("'output_file' was not specified. "\
                          "Unable to continue with inference.")

@@ -13,8 +13,8 @@ import frame_level_models
 import video_level_models
 from eval_utils import calculate_hit_at_one, calculate_perr, calculate_gap
 from export_model import ModelExporter
-from readers import YT8MFrameFeatureReader, YT8MAggregatedFeatureReader
-from utils import make_summary, get_feature_names_and_sizes
+from readers import get_reader
+from utils import make_summary, get_input_data_tensors
 
 if __name__ == "__main__":
     flags.DEFINE_string("train_dir", "../log/", "")
@@ -50,30 +50,6 @@ def validate_class_name(flag_value, category, modules, expected_superclass):
         return True
     raise flags.FlagsError(f"Unable to find {category} '{flag_value}'.")
 
-def get_input_data_tensors(reader,
-                           data_pattern,
-                           batch_size=1024,
-                           num_epochs=None,
-                           num_readers=1):
-    logging.info(f"Using batch size of {batch_size} for training.")
-    with tf.name_scope("train_input"):
-        files = gfile.Glob(data_pattern)
-        if not files:
-            raise IOError("Unable to find training files. "\
-                          f"data_pattern='{data_pattern}'.")
-        logging.info(f"Number of training files: {len(files)}.")
-        filename_queue = tf.train.string_input_producer(files,
-                                                        num_epochs=num_epochs,
-                                                        shuffle=True)
-        training_data = [reader.prepare_reader(filename_queue)
-                          for _ in range(num_readers)]
-        return tf.train.shuffle_batch_join(training_data,
-                                           batch_size=batch_size,
-                                           capacity=batch_size*5,
-                                           min_after_dequeue=batch_size,
-                                           allow_smaller_final_batch=True,
-                                           enqueue_many=True)
-
 def find_class_by_name(name, modules):
     modules = [getattr(module, name, None) for module in modules]
     return next(a for a in modules if a)
@@ -102,9 +78,11 @@ def build_graph(reader,
     unused_video_id, model_input_raw, labels_batch, num_frames = \
             get_input_data_tensors(reader,
                                    train_data_pattern,
+                                   shuffle=True,
                                    batch_size=batch_size,
                                    num_readers=num_readers,
-                                   num_epochs=num_epochs)
+                                   num_epochs=num_epochs,
+                                   phase="train")
     tf.summary.histogram("model/input_raw", model_input_raw)
     feature_dim = len(model_input_raw.get_shape()) - 1
     model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
@@ -323,17 +301,6 @@ class Trainer(object):
                     num_epochs=FLAGS.num_epochs)
         return tf.train.Saver(max_to_keep=0, keep_checkpoint_every_n_hours=5)
 
-def get_reader():
-    feature_names, feature_sizes = get_feature_names_and_sizes(
-            FLAGS.feature_names, FLAGS.feature_sizes)
-    if FLAGS.frame_features:
-        reader = YT8MFrameFeatureReader(feature_names=feature_names,
-                                        feature_sizes=feature_sizes)
-    else:
-        reader = YT8MAggregatedFeatureReader(feature_names=feature_names,
-                                             feature_sizes=feature_sizes)
-    return reader
-
 class ParameterServer(object):
     def __init__(self, cluster, task):
         self.cluster = cluster
@@ -369,7 +336,9 @@ def main(unused_argv):
     if not cluster or task.type == "master" or task.type == "worker":
         model = find_class_by_name(FLAGS.model,
                                    [frame_level_models, video_level_models])()
-        reader = get_reader()
+        reader = get_reader(FLAGS.feature_names,
+                            FLAGS.feature_sizes,
+                            FLAGS.frame_features)
         model_exporter = ModelExporter(frame_features=FLAGS.frame_features,
                                        model=model,
                                        reader=reader)

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from utils import dequantize
+from utils import dequantize, get_feature_names_and_sizes
 
 def resize_axis(tensor, axis, new_size, fill_value=0):
     tensor = tf.convert_to_tensor(tensor)
@@ -17,6 +17,17 @@ def resize_axis(tensor, axis, new_size, fill_value=0):
     new_shape[axis] = new_size
     resized.set_shape(new_shape)
     return resized
+
+def get_reader(feature_names, feature_sizes, frame_features):
+    feature_names, feature_sizes = get_feature_names_and_sizes(
+            feature_names, feature_sizes)
+    if frame_features:
+        reader = YT8MFrameFeatureReader(feature_names=feature_names,
+                                        feature_sizes=feature_sizes)
+    else:
+        reader = YT8MAggregatedFeatureReader(feature_names=feature_names,
+                                             feature_sizes=feature_sizes)
+    return reader
 
 class BaseReader(object):
     def prepare_reader(self, unused_filename_queue):
