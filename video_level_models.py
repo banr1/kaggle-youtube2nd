@@ -28,42 +28,56 @@ class MoeModel(models.BaseModel):
         input_size = model_input.get_shape().as_list()[1]
         remove_diag = FLAGS.gating_remove_diag
         if low_rank_gating == -1:
-            gate_activations = slim.fully_connected(model_input,
-                                                    vocab_size * (num_mixtures + 1),
-                                                    activation_fn=None,
-                                                    biases_initializer=None,
-                                                    weights_regularizer=slim.l2_regularizer(l2_penalty),
-                                                    scope="gates")
+            gate_activations = slim.fully_connected(
+                    model_input,
+                    vocab_size * (num_mixtures + 1),
+                    activation_fn=None,
+                    biases_initializer=None,
+                    weights_regularizer=slim.l2_regularizer(l2_penalty),
+                    scope="gates")
         else:
-           gate_activations1 = slim.fully_connected(model_input,
-                                                    low_rank_gating,
-                                                    activation_fn=None,
-                                                    biases_initializer=None,
-                                                    weights_regularizer=slim.l2_regularizer(l2_penalty),
-                                                    scope="gates1")
-           gate_activations = slim.fully_connected(gate_activations1,
-                                                   vocab_size * (num_mixtures + 1),
-                                                   activation_fn=None,
-                                                   biases_initializer=None,
-                                                   weights_regularizer=slim.l2_regularizer(l2_penalty),
-                                                   scope="gates2")
-        expert_activations = slim.fully_connected(model_input,
-                                                  vocab_size * num_mixtures,
-                                                  activation_fn=None,
-                                                  weights_regularizer=slim.l2_regularizer(l2_penalty),
-                                                  scope="experts")
-        gating_distribution = tf.nn.softmax(tf.reshape(gate_activations, [-1, num_mixtures + 1]))
-        expert_distribution = tf.nn.sigmoid(tf.reshape(expert_activations, [-1, num_mixtures]))
-        probabilities_by_class_and_batch = tf.reduce_sum(gating_distribution[:, :num_mixtures] * expert_distribution, 1)
-        probabilities = tf.reshape(probabilities_by_class_and_batch, [-1, vocab_size])
+           gate_activations1 = slim.fully_connected(
+                model_input,
+                low_rank_gating,
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates1")
+           gate_activations = slim.fully_connected(
+                gate_activations1,
+                vocab_size * (num_mixtures + 1),
+                activation_fn=None,
+                biases_initializer=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="gates2")
+        expert_activations = slim.fully_connected(
+                model_input,
+                vocab_size * num_mixtures,
+                activation_fn=None,
+                weights_regularizer=slim.l2_regularizer(l2_penalty),
+                scope="experts")
+        gating_distribution = tf.nn.softmax(tf.reshape(gate_activations,
+                                                       [-1, num_mixtures+1]))
+        expert_distribution = tf.nn.sigmoid(tf.reshape(expert_activations,
+                                                       [-1, num_mixtures]))
+        probabilities_by_class_and_batch = tf.reduce_sum(
+                gating_distribution[:, :num_mixtures] * expert_distribution, 1)
+        probabilities = tf.reshape(probabilities_by_class_and_batch,
+                                   [-1, vocab_size])
         if gating_probabilities:
             if gating_input == 'prob':
-                gating_weights = tf.get_variable("gating_prob_weights", [vocab_size, vocab_size],
-                                                 initializer = tf.random_normal_initializer(stddev=1 / math.sqrt(vocab_size)))
+                gating_weights = tf.get_variable(
+                        "gating_prob_weights",
+                        [vocab_size, vocab_size],
+                        initializer=tf.random_normal_initializer(
+                                stddev=1/math.sqrt(vocab_size)))
                 gates = tf.matmul(probabilities, gating_weights)
             else:
-                gating_weights = tf.get_variable("gating_prob_weights", [input_size, vocab_size],
-                                                 initializer = tf.random_normal_initializer(stddev=1 / math.sqrt(vocab_size)))
+                gating_weights = tf.get_variable(
+                        "gating_prob_weights",
+                        [input_size, vocab_size],
+                        initializer=tf.random_normal_initializer(
+                                stddev=1/math.sqrt(vocab_size)))
                 gates = tf.matmul(model_input, gating_weights)
             if remove_diag:
                 diagonals = tf.matrix_diag_part(gating_weights)
