@@ -36,14 +36,14 @@ class MoeModel(models.BaseModel):
                     weights_regularizer=slim.l2_regularizer(l2_penalty),
                     scope="gates")
         else:
-           gate_activations1 = slim.fully_connected(
+            gate_activations1 = slim.fully_connected(
                 model_input,
                 low_rank_gating,
                 activation_fn=None,
                 biases_initializer=None,
                 weights_regularizer=slim.l2_regularizer(l2_penalty),
                 scope="gates1")
-           gate_activations = slim.fully_connected(
+            gate_activations = slim.fully_connected(
                 gate_activations1,
                 vocab_size * (num_mixtures + 1),
                 activation_fn=None,
